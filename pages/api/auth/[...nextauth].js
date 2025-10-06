@@ -29,3 +29,8 @@ export const authOptions = {
 }
 
 export default NextAuth(authOptions)
+
+export async function getServerSideProps(context) {
+  return { props: {} }
+}
+
