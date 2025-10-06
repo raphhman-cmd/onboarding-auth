@@ -25,11 +25,6 @@ export const authOptions = {
 
   session: { strategy: "jwt" },
 
-  // WICHTIG: nicht /api/auth/signin!
-  pages: {
-    signIn: "/sign",
-  },
-
   callbacks: {
     async jwt({ token, user }) {
       if (user) token.user = user;
