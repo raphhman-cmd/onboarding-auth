@@ -9,6 +9,7 @@ module.exports = {
           { key: "Access-Control-Allow-Origin", value: "https://explainsmart.at" }, // deine Framer-Domain
           { key: "Access-Control-Allow-Methods", value: "GET,POST,OPTIONS" },
           { key: "Access-Control-Allow-Headers", value: "Content-Type,Authorization" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
         ],
       },
     ]
