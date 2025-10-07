@@ -13,4 +13,12 @@
     "react-dom": "18.2.0",
     "next-auth": "^4.24.5"
   }
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  }
 }
