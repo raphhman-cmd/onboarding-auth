@@ -27,6 +27,7 @@ export default async function handler(req, res) {
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
       allow_promotion_codes: true,
+       automatic_payment_methods: { enabled: true },
       success_url: "https://explainsmart.at/dashboard",
       cancel_url: "https://explainsmart.at/checkout?canceled=true",
     })
