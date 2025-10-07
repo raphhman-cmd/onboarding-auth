@@ -1,8 +1,6 @@
-// ✅ Diese Schreibweise funktioniert in Render-Umgebung (CommonJS)
 import { createClient } from "@supabase/supabase-js"
 import bcrypt from "bcryptjs"
 
-// ⬅️ Variablen: Achte darauf, dass du sie exakt so in Render > Environment einträgst
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -20,7 +18,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🟡 1. Prüfen, ob Benutzer bereits existiert
+    // Prüfen, ob User bereits existiert
     const { data: existingUser, error: existingError } = await supabase
       .from("users")
       .select("id, email")
@@ -32,10 +30,10 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Benutzer existiert bereits" })
     }
 
-    // 🟢 2. Passwort sicher hashen
+    // Passwort hashen
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    // 🟣 3. Benutzer in DB anlegen
+    // Benutzer speichern
     const { data, error } = await supabase
       .from("users")
       .insert([{ email, password: hashedPassword, name }])
@@ -44,7 +42,6 @@ export default async function handler(req, res) {
 
     if (error) throw error
 
-    // 🟢 4. Erfolgreiche Antwort
     return res.status(201).json({
       message: "Benutzer erfolgreich erstellt",
       user: data,
