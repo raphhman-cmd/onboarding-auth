@@ -10,6 +10,7 @@ export default async function handler(req, res) {
     try {
         const { plan, email } = req.body
 
+        // Deine Stripe Price-IDs
         const priceMap = {
             starter_monthly: "price_1SEwUSLKVq0tYR2Qn7L2GJ5u",
             starter_yearly:"price_1SEwUSLKVq0tYR2QoHY6NO9u",
@@ -24,23 +25,13 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: "Ungültiger Plan" })
         }
 
-        // Stripe-Kunde finden oder erstellen
-        const existingCustomers = await stripe.customers.list({
-            email,
-            limit: 1,
-        })
+        // 🔹 Kunden finden oder neu anlegen
+        const existingCustomers = await stripe.customers.list({ email, limit: 1 })
+        let customer = existingCustomers.data.length
+            ? existingCustomers.data[0]
+            : await stripe.customers.create({ email })
 
-        let customer
-        if (existingCustomers.data.length > 0) {
-            customer = existingCustomers.data[0]
-        } else {
-            customer = await stripe.customers.create({
-                email,
-                description: `ExplainSmart Kunde (${plan})`,
-            })
-        }
-
-        // Abo mit 30 Tagen kostenlos
+        // 🔹 Subscription erstellen mit 30 Tagen gratis
         const subscription = await stripe.subscriptions.create({
             customer: customer.id,
             items: [{ price: priceId }],
@@ -51,9 +42,9 @@ export default async function handler(req, res) {
 
         const clientSecret = subscription.latest_invoice.payment_intent.client_secret
 
-        res.status(200).json({ clientSecret })
-    } catch (error) {
-        console.error("❌ Stripe Error:", error)
-        res.status(500).json({ error: error.message })
+        return res.status(200).json({ clientSecret })
+    } catch (err) {
+        console.error("Stripe Error:", err)
+        return res.status(500).json({ error: err.message })
     }
 }
