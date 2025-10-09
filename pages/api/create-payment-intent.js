@@ -28,7 +28,7 @@ export default async function handler(req, res) {
             starter_yearly: "price_1SEwUSLKVq0tYR2QoHY6NO9u",
             professional_monthly: "price_1SFsBGLKVq0tYR2QHNvcjv1k",
             professional_yearly: "price_1SFsBrLKVq0tYR2QiRGp88T8",
-            enterprise_monthly: "price_1SFsEGLKVq0tYR2QjJYvq4e9",
+            enterprise_monthly: "price_1SFsDmLKVq0tYR2Qgi2OFzXv",
             enterprise_yearly: "price_1SFsEGLKVq0tYR2QjJYvq4e9",
         }
 
