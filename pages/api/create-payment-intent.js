@@ -1,8 +1,9 @@
 import Stripe from "stripe"
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export default async function handler(req, res) {
-    // 🛡️ CORS
+    // CORS
     res.setHeader("Access-Control-Allow-Origin", "https://explainsmart.at")
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
     res.setHeader("Access-Control-Allow-Headers", "Content-Type")
@@ -19,7 +20,7 @@ export default async function handler(req, res) {
     try {
         const { plan, email } = req.body
 
-        // 🔹 Verwende hier NUR recurring Preise aus Stripe!
+        // 🔹 Verwende nur recurring Price-IDs
         const priceMap = {
             starter_monthly: "price_1SEwUSLKVq0tYR2Qn7L2GJ5u",       // recurring, monatlich
             starter_yearly: "price_1SEwUSLKVq0tYR2QoHY6NO9u",         // recurring, jährlich
@@ -34,31 +35,34 @@ export default async function handler(req, res) {
             return res.status(400).json({ error: "Ungültiger Plan" })
         }
 
-        // 🔹 Kunden suchen oder anlegen
+        // 🔹 Kunden holen oder anlegen
         const existingCustomers = await stripe.customers.list({ email, limit: 1 })
         const customer = existingCustomers.data.length
             ? existingCustomers.data[0]
             : await stripe.customers.create({ email })
 
-        // 🔹 Subscription mit 30 Tagen kostenlos
+        // 🔹 Subscription mit Trial + Karte speichern
         const subscription = await stripe.subscriptions.create({
             customer: customer.id,
             items: [{ price: priceId }],
-            trial_period_days: 30, // 🎁 30 Tage gratis
-            payment_behavior: "default_incomplete", // Karte wird sofort gespeichert, aber erst nach Trial belastet
-            expand: ["latest_invoice.payment_intent"], // PaymentIntent wird sofort zurückgegeben
+            trial_period_days: 30,
+            payment_behavior: "default_incomplete",
+            expand: ["pending_setup_intent"], // ⚡ wichtig!
         })
 
-        // 🔹 client_secret extrahieren
-        const paymentIntent = subscription?.latest_invoice?.payment_intent
-        if (!paymentIntent) {
-            console.error("⚠️ Kein PaymentIntent vorhanden:", subscription)
-            return res.status(500).json({ error: "Stripe hat kein PaymentIntent geliefert." })
+        // 👉 Stripe gibt hier jetzt pending_setup_intent zurück
+        const setupIntent = subscription?.pending_setup_intent
+
+        if (!setupIntent) {
+            console.error("⚠️ Kein SetupIntent im Stripe-Response:", subscription)
+            return res
+                .status(500)
+                .json({ error: "Stripe lieferte kein SetupIntent zurück" })
         }
 
-        res.status(200).json({
-            clientSecret: paymentIntent.client_secret,
-        })
+        const clientSecret = setupIntent.client_secret
+
+        res.status(200).json({ clientSecret })
     } catch (err) {
         console.error("❌ Stripe Error:", err)
         res.status(500).json({ error: err.message })
