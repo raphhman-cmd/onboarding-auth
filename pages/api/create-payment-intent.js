@@ -3,21 +3,14 @@ import Stripe from "stripe"
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 export default async function handler(req, res) {
-    // 🛡️ 1. CORS-Header setzen
+    // 🛡️ CORS
     res.setHeader("Access-Control-Allow-Origin", "https://explainsmart.at")
     res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS")
     res.setHeader("Access-Control-Allow-Headers", "Content-Type")
 
-    // 🛡️ 2. OPTIONS-Preflight abfangen (Browser schickt das vor jeder echten Anfrage)
-    if (req.method === "OPTIONS") {
-        res.status(200).end()
-        return
-    }
-
-    // 🛡️ 3. Nur POST zulassen
-    if (req.method !== "POST") {
+    if (req.method === "OPTIONS") return res.status(200).end()
+    if (req.method !== "POST")
         return res.status(405).json({ error: "Method not allowed" })
-    }
 
     try {
         const { plan, email } = req.body
@@ -33,27 +26,39 @@ export default async function handler(req, res) {
         }
 
         const priceId = priceMap[plan]
-        if (!priceId) {
-            return res.status(400).json({ error: "Ungültiger Plan" })
-        }
+        if (!priceId) return res.status(400).json({ error: "Ungültiger Plan" })
 
-        // 🔹 Kunde suchen oder neu anlegen
-        const existingCustomers = await stripe.customers.list({ email, limit: 1 })
-        let customer = existingCustomers.data.length
-            ? existingCustomers.data[0]
+        // 🔹 Kunde finden oder neu anlegen
+        const existing = await stripe.customers.list({ email, limit: 1 })
+        const customer = existing.data.length
+            ? existing.data[0]
             : await stripe.customers.create({ email })
 
-        // 🔹 Subscription mit 30 Tagen gratis erstellen
+        // 🔹 Subscription anlegen (Trial + Intent holen)
         const subscription = await stripe.subscriptions.create({
             customer: customer.id,
             items: [{ price: priceId }],
             trial_period_days: 30,
             payment_behavior: "default_incomplete",
             collection_method: "charge_automatically",
-            expand: ["latest_invoice.payment_intent"],
+            expand: ["latest_invoice.payment_intent", "pending_setup_intent"],
         })
 
-        const clientSecret = subscription.latest_invoice.payment_intent.client_secret
+        // ✅ Stripe gibt entweder einen payment_intent ODER setup_intent zurück
+        const clientSecret =
+            subscription.latest_invoice?.payment_intent?.client_secret ||
+            subscription.pending_setup_intent?.client_secret
+
+        // Debugging – zeigt dir im Render-Log, was Stripe wirklich zurückgibt
+        console.log("🔍 Subscription Response:", JSON.stringify(subscription, null, 2))
+
+        if (!clientSecret) {
+            console.error("⚠️ Kein client_secret erhalten. Stripe Response:", subscription)
+            return res.status(500).json({
+                error:
+                    "Stripe hat keinen Client Secret zurückgegeben. Bitte prüfe die Logs.",
+            })
+        }
 
         return res.status(200).json({ clientSecret })
     } catch (err) {
