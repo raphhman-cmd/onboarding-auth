@@ -49,6 +49,7 @@ export default async function handler(req, res) {
             items: [{ price: priceId }],
             trial_period_days: 30,
             payment_behavior: "default_incomplete",
+            collection_method: "charge_automatically",
             expand: ["latest_invoice.payment_intent"],
         })
 
